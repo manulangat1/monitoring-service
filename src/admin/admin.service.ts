@@ -1,14 +1,20 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { Admin } from '../database/entities/admin.entity';
 import { CreateAdminDTO } from './dto/create-admin.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, FindOneOptions, Repository } from 'typeorm';
 import * as argon from 'argon2';
-import { _400 } from '../common/constants/error-messages';
+import { _400, _401 } from '../common/constants/error-messages';
 import { dataResponse, DataResponseDto } from '../common/dto/data-response.dto';
 import { plainToInstance } from 'class-transformer';
 import { AdminResponseDto } from './dto/admin.response.dto';
 import { CompanyService } from '../company/company.service';
+import { AdminSignInDto } from './dto/singin.dto';
+import { okResponse, OkResponse } from '../common/dto/ok-response.dto';
 @Injectable()
 export class AdminService {
   constructor(
@@ -60,5 +66,23 @@ export class AdminService {
     });
 
     return dataResponse(plainToInstance(AdminResponseDto, admin));
+  }
+
+  async signIn(payload: AdminSignInDto): Promise<OkResponse> {
+    // TODO: implement a login counter here.
+
+    const { email, password } = payload;
+
+    const adminExists = await this.findOne({
+      where: { email },
+    });
+
+    const passwordMatches = await argon.verify(adminExists.password, password);
+    if (!passwordMatches)
+      throw new ForbiddenException(_401.INVALID_CREDENTIALS);
+
+    // TODO: generate the token  and save it in the database as well.
+
+    return okResponse();
   }
 }
